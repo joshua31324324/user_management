@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.sql import text
 import uuid
 
 
@@ -68,6 +69,17 @@ def upgrade() -> None:
         )
     """)
 user_role_enum = sa.Enum('ANONYMOUS', 'AUTHENTICATED', 'MANAGER', 'ADMIN', name='UserRole')
+
+def type_exists(connection, type_name):
+    query = text("SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = :type_name)")
+    result = connection.execute(query, type_name=type_name)
+    return result.scalar()
+
+# Get the connection
+conn = op.get_bind()
+# Check if the UserRole type already exists
+if not type_exists(conn, 'UserRole'):
+    user_role_enum.create(conn)
 if not op.get_bind().has_type(user_role_enum.name):
     op.create_type(user_role_enum)
 
