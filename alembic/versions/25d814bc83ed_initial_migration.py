@@ -67,6 +67,12 @@ def upgrade() -> None:
             now()
         )
     """)
+user_role_enum = sa.Enum('ANONYMOUS', 'AUTHENTICATED', 'MANAGER', 'ADMIN', name='UserRole')
+if not op.get_bind().has_type(user_role_enum.name):
+    op.create_type(user_role_enum)
+
+# Add the ENUM column to the table
+op.add_column('users', sa.Column('role', user_role_enum, nullable=True))
 
 
 def downgrade() -> None:
