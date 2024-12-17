@@ -7,6 +7,72 @@ from app.utils.nickname_gen import generate_nickname
 from app.utils.security import hash_password
 from app.services.jwt_service import decode_token  # Import your FastAPI app
 
+
+from datetime import datetime, timedelta
+from jose import jwt
+
+SECRET_KEY = "your_secret_key"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+async def create_user(db_session, email="test@example.com", password="sS#fdasrongPassword123!", role=UserRole.AUTHENTICATED):
+    hashed_password = hash_password(password)
+    new_user = User(
+        email=email,
+        hashed_password=hashed_password,
+        role=role
+    )
+    db_session.add(new_user)
+    await db_session.commit()
+    await db_session.refresh(new_user)
+    return new_user
+
+
+@pytest.fixture(scope="function")
+async def user(db_session):
+    new_user = await create_user(db_session)
+    return new_user
+@pytest.fixture(scope="function")
+async def user_token(user):
+    user_instance = await user
+    token_data = {"sub": str(user_instance.id), "role": user_instance.role.name}
+    token = create_access_token(data=token_data)
+    return token
+
+@pytest.fixture(scope="function")
+async def admin_user(db_session):
+    new_admin = await create_user(db_session, email="admin@example.com", role=UserRole.ADMIN)
+    return new_admin
+
+@pytest.fixture(scope="function")
+async def admin_token(admin_user): 
+    admin_instance = await admin_user
+    token_data = {"sub": str(admin_instance.id), "role": admin_instance.role.name}
+    token = create_access_token(data=token_data)
+    return token
+
+@pytest.fixture(scope="function")
+async def manager_user(db_session):
+    new_manager = await create_user(db_session, email="manager@example.com", role=UserRole.MANAGER)
+    return new_manager
+
+@pytest.fixture(scope="function")
+async def manager_token(manager_user):
+    manager_instance = await manager_user
+    token_data = {"sub": str(manager_instance.id), "role": manager_instance.role.name}
+    token = create_access_token(data=token_data)
+    return token
+
 # Example of a test function using the async_client fixture
 @pytest.mark.asyncio
 async def test_create_user_access_denied(async_client, user_token, email_service):
@@ -50,7 +116,6 @@ async def test_update_user_email_access_allowed(async_client, admin_user, admin_
     response = await async_client.put(f"/users/{admin_user.id}", json=updated_data, headers=headers)
     assert response.status_code == 200
     assert response.json()["email"] == updated_data["email"]
-
 
 @pytest.mark.asyncio
 async def test_delete_user(async_client, admin_user, admin_token):
