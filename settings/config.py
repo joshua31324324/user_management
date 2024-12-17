@@ -1,6 +1,5 @@
 from builtins import bool, int, str
-from pathlib import Path
-from pydantic import  Field, AnyUrl, DirectoryPath
+from pydantic import  Field, AnyUrl
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -12,17 +11,19 @@ class Settings(BaseSettings):
     # Security and authentication configuration
     secret_key: str = Field(default="secret-key", description="Secret key for encryption")
     algorithm: str = Field(default="HS256", description="Algorithm used for encryption")
-    access_token_expire_minutes: int = Field(default=30, description="Expiration time for access tokens in minutes")
+    access_token_expire_minutes: int = Field(default= 15, description="Expiration time for access tokens in minutes")
     admin_user: str = Field(default='admin', description="Default admin username")
     admin_password: str = Field(default='secret', description="Default admin password")
     debug: bool = Field(default=False, description="Debug mode outputs errors and sqlalchemy queries")
     jwt_secret_key: str = "a_very_secret_key"
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 15  # 15 minutes for access token
     refresh_token_expire_minutes: int = 1440  # 24 hours for refresh token
     # Database configuration
     database_url: str = Field(default='postgresql+asyncpg://user:password@postgres/myappdb', description="URL for connecting to the database")
 
+    # DockerHub
+    dockerhub_username: str = Field(default='josh336', description="DockerHub username")
+    dockerhub_token: str = Field(default='dckr_pat_tRXTVdYj_Tz8WK3iTVAYZkOrNM8', description="DockerHub token")
     # Optional: If preferring to construct the SQLAlchemy database URL from components
     postgres_user: str = Field(default='user', description="PostgreSQL username")
     postgres_password: str = Field(default='password', description="PostgreSQL password")
