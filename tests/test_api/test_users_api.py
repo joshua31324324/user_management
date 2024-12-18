@@ -87,14 +87,23 @@ async def test_create_user_access_denied(async_client, user_token):
     response = await async_client.post("/users/", json=user_data, headers=headers)
     # Asserts
     assert response.status_code == 403
-
+@pytest.mark.asyncio
+async def test_invalid_professional_status_upgrade(async_client, admin_token):
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    response = await async_client.put("/api/users/9999/upgrade", headers=headers)
+    assert response.status_code == 404
 # You can similarly refactor other test functions to use the async_client fixture
 @pytest.mark.asyncio
 async def test_retrieve_user_access_denied(async_client, verified_user, user_token):
     headers = {"Authorization": f"Bearer {user_token}"}
     response = await async_client.get(f"/users/{verified_user.id}", headers=headers)
     assert response.status_code == 403
-
+@pytest.mark.asyncio
+async def test_retrieve_user_profile(async_client, user):
+    response = await async_client.get(f"/api/users/{user.id}")
+    assert response.status_code == 200
+    retrieved_user = response.json()
+    assert retrieved_user["id"] == user.id
 @pytest.mark.asyncio
 async def test_retrieve_user_access_allowed(async_client, admin_user, admin_token):
     headers = {"Authorization": f"Bearer {admin_token}"}
@@ -117,6 +126,29 @@ async def test_update_user_email_access_allowed(async_client, admin_user, admin_
     assert response.status_code == 200
     assert response.json()["email"] == updated_data["email"]
 
+@pytest.mark.asyncio
+async def test_update_user_profile_invalid_data(async_client, user):
+    user_data = { "name": "", "bio": "New Bio", "location": "Newark, NJ" }
+    response = await async_client.put(f"/api/users/{user.id}", json=user_data)
+    assert response.status_code == 422
+    
+@pytest.mark.asyncio
+async def test_admin_professional_status_upgrade(async_client, admin_token, regular_user):
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    response = await async_client.put(f"/api/users/{regular_user.id}/upgrade", headers=headers)
+    assert response.status_code == 200
+    upgraded_user = response.json()
+    assert upgraded_user["role"] == "PROFESSIONAL"
+@pytest.mark.asyncio
+async def test_admin_upgrade_another_user_profile(async_client, admin_token, regular_user):
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    user_data = { "name": "Admin Updated Name", "bio": "Admin Updated Bio", "location": "Admin Updated Location" }
+    response = await async_client.put(f"/api/users/{regular_user.id}", json=user_data, headers=headers)
+    assert response.status_code == 200
+    updated_user = response.json()
+    assert updated_user["name"] == "Admin: Updated Name"
+    assert updated_user["bio"] == "Admin: Updated Bio"
+    assert updated_user["location"] == "Admin: Updated Location"
 @pytest.mark.asyncio
 async def test_delete_user(async_client, admin_user, admin_token):
     headers = {"Authorization": f"Bearer {admin_token}"}
@@ -214,7 +246,28 @@ async def test_delete_user_does_not_exist(async_client, admin_token):
     headers = {"Authorization": f"Bearer {admin_token}"}
     delete_response = await async_client.delete(f"/users/{non_existent_user_id}", headers=headers)
     assert delete_response.status_code == 404
-
+@pytest.mark.asyncio
+async def test_non_admin_professional_status_upgrade_attempt(async_client, user_token, regular_user):
+    headers = {"Authorization": f"Bearer {user_token}"}
+    response = await async_client.put(f"/api/users/{regular_user.id}/upgrade", headers=headers)
+    assert response.status_code == 403
+    
+@pytest.mark.asyncio
+async def test_profile_update_missing_required_field(async_client, user):
+    user_data = { "bio": "New Bio" }
+    response = await async_client.put(f"/api/users/{user.id}", json=user_data)
+    assert response.status_code == 422
+@pytest.mark.asyncio
+async def test_profile_update_with_no_changes(async_client, user):
+    user_data = { "name": user.name, "bio": user.bio, "location": user.location }
+    response = await async_client.put(f"/api/users/{user.id}", json=user_data)
+    assert response.status_code == 200
+    updated_user = response.json()
+    assert updated_user["name"] == user.name
+@pytest.mark.asyncio
+async def test_unauthorized_professional_status_upgrade(async_client):
+    response = await async_client.put("/api/users/9999/upgrade")
+    assert response.status_code == 401
 @pytest.mark.asyncio
 async def test_update_user_github(async_client, admin_user, admin_token):
     updated_data = {"github_profile_url": "http://www.github.com/kaw393939"}
