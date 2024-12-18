@@ -9,6 +9,7 @@ from app.models.user_model import UserRole
 from app.utils.nickname_gen import generate_nickname
 
 
+
 def validate_url(url: Optional[str]) -> Optional[str]:
     if url is None:
         return url
@@ -47,6 +48,11 @@ class UserUpdate(UserBase):
     linkedin_profile_url: Optional[str] =Field(None, example="https://linkedin.com/in/johndoe")
     github_profile_url: Optional[str] = Field(None, example="https://github.com/johndoe")
     role: Optional[str] = Field(None, example="AUTHENTICATED")
+    name: str = None
+    bio: str = None
+    location: str = None
+    class Config:
+        orm_mode = True
 
     @root_validator(pre=True)
     def check_at_least_one_value(cls, values):

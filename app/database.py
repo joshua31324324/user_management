@@ -1,6 +1,10 @@
+from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base, sessionmaker
 
+SQLALCHEMY_DATABASE_URL = "postgresql://user:password@localhost/mydatabase"
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 class Database:
@@ -23,3 +27,9 @@ class Database:
         if cls._session_factory is None:
             raise ValueError("Database not initialized. Call `initialize()` first.")
         return cls._session_factory
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
